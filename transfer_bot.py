@@ -1,7 +1,6 @@
 import requests
 import json
 import os
-from dotenv import load_dotenv
 
 try:
     from dotenv import load_dotenv
@@ -15,15 +14,60 @@ CHAT_ID = os.environ["CHAT_ID"]
 SHEET_URL = os.environ["SHEET_URL"]
 HISTORY_FILE = "sent.json"
 
+def normalize_name(name):
+    """Specialtecken så att matchningen blir exakt"""
+    if not name:
+        return ""
+    
+    name = name.lower()
+    
+    replacements = {
+        'ø': 'o', 'ö': 'o', 'ó': 'o', 'ò': 'o', 'ô': 'o',
+        'å': 'a', 'ä': 'a', 'á': 'a', 'à': 'a', 'â': 'a', 'æ': 'ae',
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'í': 'i', 'ì': 'i', 'î': 'i',
+        'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+        'ñ': 'n', 'ç': 'c',
+        '-': ' ',
+        "'": "",  
+        "´": "",
+        "`": ""
+    }
+    
+    for key, value in replacements.items():
+        name = name.replace(key, value)
+        
+    return name.strip()
+
+
 def get_watchlist():
     """Hämtar spelare från sheet"""
     print("Hämtar bevakningslista")
     try:
         response = requests.get(SHEET_URL)
-        return [line.strip().lower() for line in response.text.splitlines() if line.strip()]
+        return [normalize_name(line) for line in response.text.splitlines() if line.strip()]
     except Exception as e:
         print(f"Fel vid hämtning av lista: {e}")
         return []
+
+
+def format_fee(fee_value):
+    """Formaterar siffror till snygga valutor, eller returnerar texten om det är ett lån/gratis"""
+    if isinstance(fee_value, (int, float)):
+        # Formaterar med mellanslag som tusentalsavskiljare
+        formatted_number = "{:,}".format(fee_value).replace(",", " ")
+        return f"€ {formatted_number}"
+    # Om de är en "on loan" eller "free transfer"
+    elif isinstance(fee_value, str):
+        # Översätt till svenska
+        translations = {
+            "on loan": "Lån",
+            "free transfer": "Gratis",
+            "fee": "Hemlig summa"
+        }
+        return translations.get(fee_value.lower(), fee_value.capitalize())
+    
+    return "Okänt pris"
 
 
 def get_transfers():
@@ -39,17 +83,18 @@ def get_transfers():
         clean_transfers = []
         for t in raw_list:
             raw_fee = t.get("fee")
+
             if raw_fee:
-                fee_value = raw_fee.get("value") or raw_fee.get("feeText", "Okänt pris")
+                raw_value = raw_fee.get("value") or raw_fee.get("feeText", "Okänt pris")
             else:
-                fee_value = "Okänt pris"
+                raw_value = "Okänt pris"
 
             clean_transfers.append({
-                "name": t.get("name", "").lower(),
+                "search_name": normalize_name(t.get("name", "")),
                 "display_name": t.get("name", ""), 
                 "from": t.get("fromClub", "Okänd"),
                 "to": t.get("toClub", "Okänd"),
-                "fee": fee_value
+                "fee": format_fee(raw_value)
             })
         return clean_transfers
     except Exception as e:
@@ -60,7 +105,7 @@ def get_transfers():
 def send_telegram(t):
     """Skickar notisen t telegram"""
     msg = (
-        f"🚨 <b>TRANSFER!</b>\n\n"
+        f"🚨 <b>TRANSFER</b> 🚨 \n\n"
         f"⚽ <b>{t['display_name']}</b>\n"
         f"➡️ Från: {t['from']}\n"
         f"⬅️ Till: {t['to']}\n"
@@ -87,9 +132,9 @@ def main():
 
     #Jämför
     for t in transfers:
-        if t["name"] in watchlist:
+        if t["search_name"] in watchlist:
             #kollar både namn och ny klubb
-            unique_id = f"{t['name']}-{t['to']}"
+            unique_id = f"{t['search_name']}-{t['to']}"
             
             if unique_id not in sent_players:
                 print(f"TRÄFF! Skickar notis om {t['display_name']}")
