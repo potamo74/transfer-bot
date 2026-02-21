@@ -37,6 +37,6 @@ jobs:
         run: |
           git config user.name "TransferBot"
           git config user.email "bot@transfer.com"
-          git add sent.json
+          git add -f sent.json
           git commit -m "Uppdaterad historik" || echo "Inget nytt att spara"
           git push
