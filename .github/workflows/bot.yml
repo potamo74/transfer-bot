@@ -29,7 +29,7 @@ jobs:
       - name: Kör boten
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.CHAT_ID }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           SHEET_URL: ${{ secrets.SHEET_URL }}
         run: python transfer_bot.py
 
