@@ -41,11 +41,24 @@ def normalize_name(name):
 
 
 def get_watchlist():
-    """Hämtar spelare från sheet"""
+    """Hämtar spelare och ev. klubb från sheet"""
     print("Hämtar bevakningslista")
+    watchlist = []
     try:
         response = requests.get(SHEET_URL)
-        return [normalize_name(line) for line in response.text.splitlines() if line.strip()]
+        for line in response.text.splitlines():
+            if not line.strip():
+                continue
+            
+            parts = line.split(',')
+            name = normalize_name(parts[0])
+            
+            # Om klubb inskriven, spara det som "club"
+            club = normalize_name(parts[1]) if len(parts) > 1 and parts[1].strip() else None
+            
+            watchlist.append({"name": name, "club": club})
+            
+        return watchlist
     except Exception as e:
         print(f"Fel vid hämtning av lista: {e}")
         return []
@@ -133,18 +146,25 @@ def main():
 
     new_sent = sent_players.copy()
 
+
     #Jämför
     for t in transfers:
-        if t["search_name"] in watchlist:
-            #kollar både namn och ny klubb
-            unique_id = f"{t['search_name']}-{t['to']}"
-            
-            if unique_id not in sent_players:
-                print(f"TRÄFF! Skickar notis om {t['display_name']}")
-                send_telegram(t)
-                new_sent.append(unique_id)
-            else:
-                print(f"Redan skickat för {t['display_name']}")
+        for w in watchlist:
+            # Stämmer namnet?
+            if t["search_name"] == w["name"]:
+                
+                if w["club"] and normalize_name(t["from"]) != w["club"]:
+                    continue #klubben matchar inte
+
+                unique_id = f"{t['search_name']}-{t['to']}"
+                
+                if unique_id not in sent_players:
+                    print(f"TRÄFF! Skickar notis om {t['display_name']}")
+                    send_telegram(t)
+                    new_sent.append(unique_id)
+                else:
+                    print(f"Redan skickat för {t['display_name']}")
+                break
 
     #Spara historik
     with open(HISTORY_FILE, "w") as f:
