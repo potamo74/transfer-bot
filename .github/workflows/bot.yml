@@ -23,6 +23,9 @@ jobs:
       - name: Installera bibliotek
         run: pip install requests
 
+      - name: Installera bibliotek
+        run: pip install requests python-dotenv
+
       - name: Kör boten
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}

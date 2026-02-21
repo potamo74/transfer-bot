@@ -3,7 +3,12 @@ import json
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Hämtar nycklar
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -33,13 +38,18 @@ def get_transfers():
         
         clean_transfers = []
         for t in raw_list:
-            #Lägger till spelare i listan.
+            raw_fee = t.get("fee")
+            if raw_fee:
+                fee_value = raw_fee.get("value") or raw_fee.get("feeText", "Okänt pris")
+            else:
+                fee_value = "Okänt pris"
+
             clean_transfers.append({
                 "name": t.get("name", "").lower(),
                 "display_name": t.get("name", ""), 
                 "from": t.get("fromClub", "Okänd"),
                 "to": t.get("toClub", "Okänd"),
-                "fee": t.get("fee", {}).get("value", "Okänt pris")
+                "fee": fee_value
             })
         return clean_transfers
     except Exception as e:
