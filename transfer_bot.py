@@ -107,7 +107,7 @@ def get_transfers():
 def send_telegram(t):
     """Skickar notisen t telegram"""
     msg = (
-        f"🚨 <b>TRANSFER</b> 🚨 \n\n"
+        f"🚨 <b>TRANSFER!</b> 🚨 \n\n"
         f"⚽ <b>{t['display_name']}</b>\n"
         f"➡️ From: {t['from']}\n"
         f"⬅️ To: {t['to']}\n"
