@@ -1,11 +1,13 @@
 import requests
 import json
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 # Hämtar nycklar
-TELEGRAM_TOKEN = os.environ["8569602675:AAF6K9rh7Vo01zAp_o1iaKWWtJw-NIkbSYw"]
-CHAT_ID = os.environ["8205152248"]
-SHEET_URL = os.environ["https://docs.google.com/spreadsheets/d/e/2PACX-1vS3uIgzCqha10nuHln-lgZ3kHw33mtQCV4lSM_Ga_0Woex-82PXkf-1wmbYzex_tUgL2_MI0CVVefm7/pub?gid=0&single=true&output=csv"]
+TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
+SHEET_URL = os.environ["SHEET_URL"]
 HISTORY_FILE = "sent.json"
 
 def get_watchlist():
