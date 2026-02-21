@@ -51,23 +51,22 @@ def get_watchlist():
         return []
 
 
-def format_fee(fee_value):
+def format_fee(fee_value, is_fee = False):
     """Formaterar siffror till snygga valutor, eller returnerar texten om det är ett lån/gratis"""
     if isinstance(fee_value, (int, float)):
         # Formaterar med mellanslag som tusentalsavskiljare
         formatted_number = "{:,}".format(fee_value).replace(",", " ")
         return f"€ {formatted_number}"
     # Om de är en "on loan" eller "free transfer"
-    elif isinstance(fee_value, str):
-        # Översätt till svenska
+    elif is_fee and isinstance(fee_value, str):
         translations = {
-            "on loan": "Lån",
-            "free transfer": "Gratis",
-            "fee": "Hemlig summa"
+            "on loan": "On loan",
+            "free transfer": "Free transfer",
+            "fee": "Undisclosed fee"
         }
         return translations.get(fee_value.lower(), fee_value.capitalize())
     
-    return "Okänt pris"
+    return "Unknown"
 
 
 def get_transfers():
@@ -85,16 +84,19 @@ def get_transfers():
             raw_fee = t.get("fee")
 
             if raw_fee:
-                raw_value = raw_fee.get("value") or raw_fee.get("feeText", "Okänt pris")
+                raw_value = raw_fee.get("value") or raw_fee.get("feeText", "Unknown fee")
             else:
-                raw_value = "Okänt pris"
+                raw_value = "Unknown fee"
+
+            raw_market_value = t.get("marketValue")
 
             clean_transfers.append({
                 "search_name": normalize_name(t.get("name", "")),
                 "display_name": t.get("name", ""), 
-                "from": t.get("fromClub", "Okänd"),
-                "to": t.get("toClub", "Okänd"),
-                "fee": format_fee(raw_value)
+                "from": t.get("fromClub", "Unknown"),
+                "to": t.get("toClub", "Unknown"),
+                "fee": format_fee(raw_value, is_fee = True),
+                "market_value": format_fee(raw_market_value) if raw_market_value else "Unknown"
             })
         return clean_transfers
     except Exception as e:
@@ -107,9 +109,10 @@ def send_telegram(t):
     msg = (
         f"🚨 <b>TRANSFER</b> 🚨 \n\n"
         f"⚽ <b>{t['display_name']}</b>\n"
-        f"➡️ Från: {t['from']}\n"
-        f"⬅️ Till: {t['to']}\n"
-        f"💰 {t['fee']}"
+        f"➡️ From: {t['from']}\n"
+        f"⬅️ To: {t['to']}\n"
+        f"💰 {t['fee']}\n"
+        f"📈 Market Value: {t['market_value']}"
     )
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     requests.post(url, json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
