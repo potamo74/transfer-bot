@@ -1,0 +1,39 @@
+name: Transfer Bot
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Körs varje heltimme (kl 12:00, 13:00 osv)
+  workflow_dispatch: # Gör att du kan starta den manuellt för test
+
+jobs:
+  run_bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # VIKTIGT: Ger boten tillåtelse att spara historik-filen
+      
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v3
+
+      - name: Installera Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Installera bibliotek
+        run: pip install requests
+
+      - name: Kör boten
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SHEET_URL: ${{ secrets.SHEET_URL }}
+        run: python transfer_bot.py
+
+      - name: Spara historik (Commit)
+        run: |
+          git config user.name "TransferBot"
+          git config user.email "bot@transfer.com"
+          git add sent.json
+          git commit -m "Uppdaterad historik" || echo "Inget nytt att spara"
+          git push
